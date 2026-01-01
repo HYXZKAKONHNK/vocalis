@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vocalis - Voice & Music</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600&display=swap');
+        
+        body {
+            background-color: #05070a;
+            color: #e2e8f0;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .neon-text {
+            text-shadow: 0 0 10px rgba(56, 189, 248, 0.8), 0 0 20px rgba(56, 189, 248, 0.3);
+        }
+
+        .visualizer-bar {
+            transition: height 0.1s ease;
+        }
+
+        .glow-button {
+            transition: all 0.3s ease;
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.2);
+        }
+
+        .vocalis-ring {
+            border: 2px solid rgba(56, 189, 248, 0.2);
+            animation: pulse-ring 2s infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+
+        .loading-dots::after {
+            content: '...';
+            animation: dots 1.5s steps(5, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60% { content: '...'; }
+            80%, 100% { content: ''; }
+        }
+
+        .music-playing {
+            animation: bounce 1s infinite alternate;
+        }
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(-5px); }
+        }
+
+        /* Контейнер для динамических фреймов */
+        #media-frame-container {
+            transition: all 0.5s ease;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(14,165,233,0.1),transparent)] pointer-events-none"></div>
+
+    <header class="text-center mb-8 relative z-10">
+        <h1 class="text-5xl font-bold font-['Orbitron'] neon-text tracking-widest uppercase">Vocalis</h1>
+        <p class="text-sky-400 mt-2 opacity-70 tracking-tighter uppercase text-[10px]">Voice Synthesis & Audio System</p>
+    </header>
+
+    <main class="w-full max-w-2xl bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-3xl p-8 relative z-10 shadow-2xl">
+        
+        <!-- Динамический медиа-контейнер (YouTube/Spotify) -->
+        <div id="media-frame-container" class="mb-6 rounded-xl border border-slate-700 bg-black hidden">
+            <div id="media-content" class="w-full aspect-video"></div>
+        </div>
+
+        <!-- Плеер (Lofi/Поток) -->
+        <div id="music-panel" class="mb-6 bg-black/40 rounded-xl p-3 border border-slate-800 flex items-center justify-between hidden">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-sky-500/20 rounded-lg flex items-center justify-center music-playing">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                </div>
+                <div>
+                    <p class="text-[10px] text-sky-400 font-bold uppercase tracking-wider">Сейчас играет</p>
+                    <p id="track-name" class="text-xs text-slate-300">Аудиопоток Vocalis</p>
+                </div>
+            </div>
+            <button id="stop-music" class="text-slate-500 hover:text-rose-400 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+            </button>
+        </div>
+
+        <div class="flex flex-col items-center mb-8">
+            <div id="mic-container" class="relative w-32 h-32 flex items-center justify-center mb-6">
+                <div id="ring" class="absolute inset-0 rounded-full vocalis-ring hidden"></div>
+                <button id="voice-btn" class="relative w-24 h-24 bg-sky-500 rounded-full flex items-center justify-center glow-button z-20">
+                    <svg id="mic-icon" xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+                </button>
+            </div>
+            <div id="status-msg" class="text-lg font-medium text-slate-400 h-8 text-center px-4">Нажмите для начала</div>
+        </div>
+
+        <div id="visualizer" class="flex justify-center items-end gap-1 h-10 mb-8 opacity-0 transition-opacity">
+            <div class="visualizer-bar w-1.5 bg-sky-400 rounded-full h-2"></div>
+            <div class="visualizer-bar w-1.5 bg-sky-500 rounded-full h-6"></div>
+            <div class="visualizer-bar w-1.5 bg-sky-400 rounded-full h-4"></div>
+            <div class="visualizer-bar w-1.5 bg-sky-500 rounded-full h-8"></div>
+            <div class="visualizer-bar w-1.5 bg-sky-400 rounded-full h-3"></div>
+        </div>
+
+        <div class="space-y-4">
+            <div class="bg-black/30 rounded-2xl p-4 border border-slate-800/50">
+                <span class="text-[10px] uppercase tracking-widest text-sky-500 font-bold mb-1 block">Вы:</span>
+                <p id="user-text" class="text-slate-300 italic text-sm">...</p>
+            </div>
+
+            <div class="bg-sky-500/10 rounded-2xl p-5 border border-sky-500/20 min-h-[100px]">
+                <span class="text-[10px] uppercase tracking-widest text-sky-400 font-bold mb-1 block">Vocalis:</span>
+                <p id="ai-text" class="text-sky-100 leading-relaxed text-sm">Готова слушать.</p>
+            </div>
+        </div>
+
+        <div class="mt-6 pt-4 border-t border-slate-800 flex items-center justify-between">
+            <span class="text-[9px] text-slate-500 uppercase tracking-widest">System Voice: Russian (Female)</span>
+            <input id="backend-url" type="text" value="https://lana-hylozoic-malena.ngrok-free.dev/chat" class="bg-transparent border-none text-right text-[9px] text-sky-500 w-1/2">
+        </div>
+    </main>
+
+    <script>
+        // --- 1. Audio & Voice Engines ---
+        const audioPlayer = new Audio();
+        const MUSIC_URL = "https://stream.zeno.fm/0r0xa792kwzuv"; 
+
+        function speak(text) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'ru-RU';
+            utterance.pitch = 1.1;
+            utterance.rate = 1.0;
+            const voices = window.speechSynthesis.getVoices();
+            const ruVoice = voices.find(v => v.lang.includes('RU'));
+            if (ruVoice) utterance.voice = ruVoice;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // --- 2. ViviVoiceUnit (STT) ---
+        class ViviVoiceUnit {
+            constructor(options = {}) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                this.recognition = new SpeechRecognition();
+                this.recognition.lang = 'ru-RU';
+                this.isListening = false;
+                
+                this.recognition.onstart = () => {
+                    this.isListening = true;
+                    options.onStatusChange({ isListening: true, message: "Я слушаю..." });
+                };
+                this.recognition.onresult = (e) => options.onResult(e.results[0][0].transcript);
+                this.recognition.onend = () => {
+                    this.isListening = false;
+                    options.onStatusChange({ isListening: false, message: "Жду команду" });
+                };
+            }
+            listen() { this.recognition.start(); }
+        }
+
+        // --- 3. ViviBackendUnit ---
+        class ViviBackendUnit {
+            async send(url, text) {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_prompt: text, chat_history: [] })
+                });
+                const data = await res.json();
+                return data.response;
+            }
+        }
+
+        const backend = new ViviBackendUnit();
+        const musicPanel = document.getElementById('music-panel');
+        const mediaContainer = document.getElementById('media-frame-container');
+        const mediaContent = document.getElementById('media-content');
+        const aiDisplay = document.getElementById('ai-text');
+        const userDisplay = document.getElementById('user-text');
+        const urlInput = document.getElementById('backend-url');
+
+        const voice = new ViviVoiceUnit({
+            onStatusChange: (s) => {
+                document.getElementById('status-msg').innerText = s.message;
+                document.getElementById('ring').classList.toggle('hidden', !s.isListening);
+                document.getElementById('visualizer').classList.toggle('opacity-0', !s.isListening);
+            },
+            onResult: async (text) => {
+                userDisplay.innerText = `"${text}"`;
+                aiDisplay.innerHTML = '<span class="loading-dots">Обработка</span>';
+                
+                const lowText = text.toLowerCase();
+
+                // --- ЛОГИКА МЕДИА-КОМАНД ---
+                if (lowText.startsWith("поставь") || lowText.startsWith("включи")) {
+                    let query = lowText.replace(/поставь|включи/g, "").trim();
+                    
+                    if (query.includes("ютуб") || query.includes("youtube")) {
+                        const song = query.replace(/на ютубе|на youtube|ютуб|youtube/g, "").trim();
+                        playExternalMedia('youtube', song);
+                        return;
+                    } 
+                    else if (query.includes("спотифай") || query.includes("spotify")) {
+                        const song = query.replace(/в спотифай|в spotify|спотифай|spotify/g, "").trim();
+                        playExternalMedia('spotify', song);
+                        return;
+                    }
+                    else if (query === "музыку") {
+                        playInternalMusic();
+                        aiDisplay.innerText = "Включаю музыку Vocalis.";
+                        speak("Включаю музыку Vocalis.");
+                        return;
+                    }
+                }
+                
+                if (lowText.includes("выключи") || lowText.includes("стоп")) {
+                    stopAllMedia();
+                    aiDisplay.innerText = "Медиа остановлено.";
+                    speak("Медиа остановлено.");
+                    return;
+                }
+
+                // Обычный запрос к ИИ
+                try {
+                    const response = await backend.send(urlInput.value, text);
+                    aiDisplay.innerText = response;
+                    speak(response);
+                } catch (e) {
+                    aiDisplay.innerText = "Не удалось связаться с сервером.";
+                    speak("Произошла ошибка связи.");
+                }
+            }
+        });
+
+        // --- ФУНКЦИИ УПРАВЛЕНИЯ МЕДИА ---
+
+        function playInternalMusic() {
+            stopAllMedia();
+            audioPlayer.src = MUSIC_URL;
+            audioPlayer.play();
+            musicPanel.classList.remove('hidden');
+        }
+
+        function playExternalMedia(service, query) {
+            stopAllMedia();
+            mediaContainer.classList.remove('hidden');
+            let embedUrl = "";
+
+            if (service === 'youtube') {
+                embedUrl = `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(query)}&autoplay=1`;
+                aiDisplay.innerText = `Ищу ${query} на YouTube...`;
+                speak(`Ищу ${query} на ютубе`);
+            } else if (service === 'spotify') {
+                embedUrl = `https://open.spotify.com/embed/search/${encodeURIComponent(query)}`;
+                aiDisplay.innerText = `Открываю поиск ${query} в Spotify...`;
+                speak(`Открываю спотифай`);
+            }
+
+            mediaContent.innerHTML = `<iframe width="100%" height="100%" src="${embedUrl}" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+        }
+
+        function stopAllMedia() {
+            audioPlayer.pause();
+            musicPanel.classList.add('hidden');
+            mediaContainer.classList.add('hidden');
+            mediaContent.innerHTML = "";
+        }
+
+        document.getElementById('voice-btn').onclick = () => voice.listen();
+        document.getElementById('stop-music').onclick = stopAllMedia;
+
+        // Визуализатор
+        setInterval(() => {
+            if (voice.isListening) {
+                document.querySelectorAll('.visualizer-bar').forEach(bar => {
+                    bar.style.height = (Math.random() * 30 + 5) + 'px';
+                });
+            }
+        }, 100);
+
+        window.speechSynthesis.getVoices();
+    </script>
+</body>
+</html>
